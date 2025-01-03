@@ -1,0 +1,162 @@
+Course No. CS224
+Lab No. 7
+Section No. 1
+Halil Arda Özongun
+22202709
+Sude Ergün
+22203822
+18.12.2024
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+a) Specify the special function registers (SFRs) for the I/O device(s) involved in Part2-b.
+
+
+Involved SFRs
+
+AD1PCFG
+DDPCON.JTAGEN
+TRISA, TRISE
+LATA, LATE, PORTE
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+b) C code for Part2-b, with lots of comments, an explanatory header, well-chosen identifiers and good use of spacing and layout to make your program self-documenting.
+
+
+// A function which provides 1 second delay
+void Wait() {
+// builtin function, which delays input times milisecond.
+ Delay_ms(1000);
+}
+
+void main() {
+    // Microcontroller configuration:
+    AD1PCFG = 0xFFFF;     // Configure all pins as digital (disable analog inputs)
+    DDPCON.JTAGEN = 0;    // Disable JTAG to allow use of all pins
+
+    // Set the direction of GPIO ports:
+    TRISA = 0x0000;       // Configure all PORTA pins as outputs
+    TRISE = 0xFFFF;       // Configure all PORTE pins as inputs
+
+    LATA = 0xffff; // initialize the output.
+    LATE = 0x0000; // initialize the input port.
+
+	// an infinite loop. Thanks to this we are ready to do run all the time.
+    while (1) {
+	// a number. this number is end of the last two bit with PORTE. Thanks to this, we are not affected from other buttons when we are checking the first two buttons.
+        unsigned int buttons = PORTE & 0x0003;
+
+	// if button 0 is pressed
+        if (buttons == 0x0001) {
+                Wait(); // after taking input, wait for one second as wanted
+                LATA = 0x0004; // make PORTA equal to 2 for turning motor clockwise
+                Wait();  // wait as wanted
+                LATA = 0x0000; // make porta to non turning position
+
+        }
+	// if button 1 is pressed
+        else if (buttons == 0x0002) {
+                Wait(); // after taking input, wait for one second as wanted
+                LATA = 0x0002; // make PORTA equal to 1 for turning motor counter clockwise
+                Wait(); // wait as wanted
+                LATA = 0x0000; // make porta to non turning position
+        }
+	// if both buttons are pressed
+        else if (buttons == 0x0003) {
+            LATA = 0x0000; // make porta to non turning position 
+        }
+	// if non pressed they won't change but since we did LATA = 0X0000 after each loop it will stay in 0x0000 al the time. 
+    }
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+c) Specify the special function registers (SFRs) for the I/O device(s) involved in Part2-c.
+
+AD1PCFG
+DDPCON
+JTAGEN_bit 
+TRISA, TRISE
+PORTA, PORTE
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+d) C code for Part2-c, with lots of comments, an explanatory header, well-chosen identifiers and good use of spacing and layout to make your program self-documenting.
+
+
+/*
+Configuration for the code below:
+
+Connect portA to J1 Port of 4 Digit Seven Segment Module
+Jumpers of portA are : 5V, pull down ( top one to left, other to right )
+
+Connect portE to J2 Port of 4 Digit Seven Segment Module
+Jumpers of portE are : 5V, pull down ( top one to left, other to right )
+
+*/
+
+// Hexadecimal values for digits in 7 segment
+unsigned char binary_pattern[]={0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F};
+
+// numbers to do fibonacci. Thanks to these, we can do fibonacci in linear time instead of exponential. 
+ unsigned int num = 0;
+ unsigned int numtwo = 1;
+ unsigned int result = 0;
+
+// This is the counter of the time, to run code in the required time
+ unsigned int loop = 0;
+
+
+void main() {
+
+ // Microcontroller configuration:
+    AD1PCFG = 0xFFFF;     // Configure all pins as digital (disable analog inputs)
+    DDPCON.JTAGEN = 0;    // Disable JTAG to allow use of all pins
+
+ TRISA = 0x00;  //portA is output to D. Set PORTA as output (for segment control)
+ TRISE = 0X00;  //portE is output to AN. Set PORTE as output (for digit selection)
+
+ while(1)
+ {
+	// calculate new fibonacci value
+      result = num + numtwo;
+      
+	// a loop to run code in wanted time. 
+      while(loop < result * 250 ){
+	// with porte choose which display to use. (1 is left most, 2, 4 and 8 is the right most)
+	// with porta choose the number you want to display. when you choose a number take it's 7 segment values from the binary_pattern array.
+	// with 1 ms delay, show the number. Since delay is too short you are displaying all numbers in 4 ms. 
+	// So that you are seeing them as they are running all the time.
+        PORTA=binary_pattern[result/1000]; 
+       PORTE=0x01;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 2
+       PORTA=binary_pattern[(result/100) % 10];
+       PORTE=0x02;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 3
+       PORTA=binary_pattern[(result/10) % 10];
+       PORTE=0x04;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 4
+       PORTA=binary_pattern[result % 10];
+       PORTE=0x08;
+       Delay_ms(1);
+       loop += 1;
+      }
+	// reset the timer
+      loop = 0;
+	// for fibonacci update last and penultimate numbers. 
+      num = numtwo;
+      numtwo = result;
+ }
+
+}//main
+
+
+
+

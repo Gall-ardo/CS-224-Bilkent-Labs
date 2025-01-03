@@ -1,0 +1,205 @@
+Course No. CS224
+Lab No. 7
+Section No. 1
+Halil Arda Özongun
+22202709
+Sude Ergün
+22203822
+18.12.2024
+
+
+
+PART A: (already given)
+/*
+Attention!
+Configuration  for push-button project :
+
+Connect portA to LEDs
+Jumpers of portA are : 5V, pull up ( both of the to the left side )
+
+Connect portE to push-buttons
+Jumpers of portE are : 3V3, pull up ( top one to right, other to left )
+
+*/
+
+
+
+void Wait() {
+ Delay_ms(1000);
+}
+
+void main() {
+
+ AD1PCFG = 0xFFFF;
+
+ DDPCON.JTAGEN = 0; // disable JTAG
+
+ TRISA = 0x0000;  //portA is output to turn on LEDs.
+ TRISE = 0XFFFF;  //portE is inputs to read push-buttons.
+
+ LATA = 0Xffff;
+ LATE = 0X0000;
+
+ // single LED blink
+ LATA=0xffff;
+ Wait();
+ LATA=0x0000;
+ Wait();
+
+
+ while(1)
+ {
+  portA = portE; // read push-buttons and assign them to LEDs
+ }//while
+
+}//main
+
+
+
+-----------------------------------------------------------------------------------------------
+PART B:
+
+
+// A function which provides 1 second delay
+void Wait() {
+// builtin function, which delays input times milisecond.
+ Delay_ms(1000);
+}
+
+unsigned int buttons = 0;
+unsigned int counter = 0;
+        
+void main() {
+    // Microcontroller configuration:
+    AD1PCFG = 0xFFFF;     // Configure all pins as digital (disable analog inputs)
+    DDPCON.JTAGEN = 0;    // Disable JTAG to allow use of all pins
+
+    // Set the direction of GPIO ports:
+    TRISA = 0x0000;       // Configure all PORTA pins as outputs
+    TRISE = 0xFFFF;       // Configure all PORTE pins as inputs
+
+    LATA = 0xffff; // initialize the output.
+    LATE = 0x0000; // initialize the input port.
+
+	// an infinite loop. Thanks to this we are ready to do run all the time.
+    while (1) {
+	// a number. this number is end of the last two bit with PORTE. Thanks to this, we are not affected from other buttons when we are checking the first two buttons.
+        counter = 0;
+
+	// if button 0 is pressed
+        if (PORTE.B1 == 1 && PORTE.B0 == 0) {
+                LATA = 0x0000;
+                Wait(); // after taking input, wait for one second as wanted
+                LATA = 0x0004; // make PORTA equal to 2 for turning motor clockwise
+                while (counter < 1000) { // wait for 1000 times
+                    counter++;
+                    Delay_ms(1);
+                    if ( PORTE.B1 == 0 && PORTE.B0 == 0) { // if both buttons are pressed, break the loop
+                       LATA = 0x0008;
+                       Wait();
+                        break;
+
+                    }
+                    if( PORTE.B1 == 0 && PORTE.B0 == 1) { // if button 1 is pressed, break the loop
+                        LATA = 0x0008;
+                       Wait();
+                        break;
+                    }
+                }
+                LATA = 0x0000; // make porta to non turning position
+
+        }
+	// if button 1 is pressed
+        else if (PORTE.B1 == 0 && PORTE.B0 == 1) {
+                Wait(); // after taking input, wait for one second as wanted
+                LATA = 0x0002; // make PORTA equal to 1 for turning motor counter clockwise
+                while (counter < 1000) { // wait for 1000 times
+                    counter++;
+                    Delay_ms(1);
+                    if (  PORTE.B1 == 0 && PORTE.B0 == 0) { // if both buttons are pressed, break the loop
+                        LATA = 0x0008;
+                       Wait();
+                        break;
+                    }
+                    if( PORTE.B1 == 1 && PORTE.B0 == 0) { // if button 0 is pressed, break the loop
+                        LATA = 0x0008;
+                       Wait();
+                        break;
+                    }
+                }
+
+                LATA = 0x0000; // make porta to non turning position
+        }
+	// if both buttons are pressed
+        else if (PORTE.B1 == 0 && PORTE.B0 == 0) {
+            LATA = 0x0000; // make porta to non turning position
+        }
+	// if non pressed they won't change but since we did LATA = 0X0000 after each loop it will stay in 0x0000 al the time.
+    }
+}
+
+-----------------------------------------------------------------------------------------------
+PART C:
+/*
+Configuration for the code below:
+
+Connect portA to J1 Port of 4 Digit Seven Segment Module
+Jumpers of portA are : 5V, pull down ( top one to left, other to right )
+
+Connect portE to J2 Port of 4 Digit Seven Segment Module
+Jumpers of portE are : 5V, pull down ( top one to left, other to right )
+
+*/
+
+// Hexadecimal values for digits in 7 segment
+unsigned char binary_pattern[]={0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F};
+
+
+ unsigned int num = 0;
+ unsigned int numtwo = 1;
+ unsigned int result = 0;
+ unsigned int loop = 0;
+
+
+void main() {
+
+ AD1PCFG = 0xFFFF;      // Configure AN pins as digital I/O
+ JTAGEN_bit = 0;        // Disable JTAG
+
+ TRISA = 0x00;  //portA is output to D
+ TRISE = 0X00;  //portE is output to AN
+
+ while(1)
+ {
+      result = num + numtwo;
+      
+      while(loop < result * 250 ){
+        PORTA=binary_pattern[result/1000];
+       PORTE=0x01;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 2
+       PORTA=binary_pattern[(result/100) % 10];
+       PORTE=0x02;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 3
+       PORTA=binary_pattern[(result/10) % 10];
+       PORTE=0x04;
+       Delay_ms(1);
+       loop += 1;
+
+       // Digit 4
+       PORTA=binary_pattern[result % 10];
+       PORTE=0x08;
+       Delay_ms(1);
+       loop += 1;
+      }
+      loop = 0;
+      num = numtwo;
+      numtwo = result;
+ }
+
+}//main

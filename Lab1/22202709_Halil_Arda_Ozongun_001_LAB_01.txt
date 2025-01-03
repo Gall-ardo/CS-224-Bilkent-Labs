@@ -1,0 +1,336 @@
+CS224
+Lab No. 01
+Section No. 001
+Full Name: Halil Arda Özongun
+Bilkent ID 22202709
+Date 09.10.2024
+
+----------------------------------------------------------------------------
+Lab Work
+----------------------------------------------------------------------------
+
+2. Using breakpoints in MARS, fixing logic errors and using jal and jr instructions (20 points)
+##
+##	
+##        
+
+
+
+	.text	
+ 
+# execution starts here
+	li $a0,3	# to calculate fib(7)
+	jal fib		# call fib
+	move $a0,$v0	# print result
+	li $v0, 1
+	syscall
+
+	la $a0,endl	# print newline
+	li $v0,4
+	syscall
+
+	li $v0,10
+	syscall		# bye bye
+
+#------------------------------------------------
+
+
+fib:	move $v0,$a0	# initialise last element
+	blt $a0,2,done	# fib(0)=0, fib(1)=1
+
+	li $t0,0	# second last element
+	li $v0,1	# last element
+
+loop:	add $t1,$t0,$v0	# get next value
+	move $t0,$v0	# update second last
+	move $v0,$t1	# update last element
+	sub $a0,$a0,1	# decrement count
+	bgt $a0,1,loop	# exit loop when count=1
+done:	jr $ra
+
+#################################
+#					 	#
+#     	 data segment		#
+#						#
+#################################
+
+	.data
+endl:	.asciiz "\n"
+
+##
+## end of Program3.asm
+
+
+
+
+
+----------------------------------------------------------------------------
+3. Using MIPS for mathematical calculations (15 points)
+
+# Halil Arda Ozongun ID: 22202709
+# CS 224- Lab1
+# Solution of question 3 in lab part
+        .data
+prompt_B:  .asciiz "Enter value for B: "
+prompt_C:  .asciiz "Enter value for C: "
+prompt_D:  .asciiz "Enter value for D: "
+result:    .asciiz "Result of ((b*c)modd) / (b-c) is: "
+error_msg: .asciiz "Error: Division by zero. Please enter new values.\n"
+error_mod: .asciiz "Error: Mod by zero. Please enter new values.\n"
+
+# $s0 -> B
+# $s1 -> C
+# $s2 -> D
+# ((b*c)modd) / (b-c)
+
+        .text
+        .globl main
+main:
+    # Prompt for B
+    li $v0, 4
+    la $a0, prompt_B
+    syscall
+    li $v0, 5
+    syscall
+    move $s0, $v0            # store B in $s0
+    
+    # Prompt for C
+    li $v0, 4 
+    la $a0, prompt_C     
+    syscall
+    li $v0, 5  
+    syscall
+    move $s1, $v0            # store C in $s1
+    
+    # Prompt for D
+    li $v0, 4        
+    la $a0, prompt_D     
+    syscall
+    li $v0, 5
+    syscall
+    move $s2, $v0            # store D in $s2
+    
+    # Check if D is zero
+    beqz $s2, mod_by_zero_error
+    
+    # calculation is: ((b*c)modd) / (b-c) 
+    
+    # Step 1: Calculate b * c
+    mult $s0, $s1        # $s0 * $s1, result in hi:lo
+    mflo $t0             # $t0 = b * c (assuming result fits in 32 bits)
+    
+    # Step 2: Calculate (b*c) mod d
+    div $t0, $s2         # (b*c) / d
+    mfhi $t1             # $t1 = (b*c) mod d
+    
+    # Step 3: Calculate b - c
+    sub $t2, $s0, $s1    # $t2 = b - c
+    
+    # Check if (b-c) is zero
+    beqz $t2, division_by_zero_error
+    
+    # Step 4: Calculate ((b*c)modd) / (b-c)
+    div $t1, $t2         # ((b*c)modd) / (b-c)
+    mflo $t0             # $t0 = final result
+    
+    # print and finish
+    li $v0, 4
+    la $a0, result
+    syscall
+ 
+    li $v0, 1         
+    move $a0, $t0
+    syscall
+    j exit
+
+division_by_zero_error:
+    li $v0, 4
+    la $a0, error_msg
+    syscall
+    j main  # Restart the program
+    
+mod_by_zero_error:
+    li $v0, 4
+    la $a0, error_mod
+    syscall
+    j main 
+ 
+exit:
+    li $v0, 10
+    syscall
+
+
+----------------------------------------------------------------------------
+4. Using MIPS for implementing a program with a simple menu that involve loop (20 points)
+
+#
+# Halil Arda Ozongun ID: 22202709
+# CS 224- Lab1
+# Solution of question 4 in lab part
+#
+
+
+
+.data
+array: .align 4  # Ensure word alignment
+       .space 400 # 100 element array
+askSize: .asciiz "Enter the size of array (1-100): "
+menuPrompt: .asciiz "\nMenu:\n1. Display maximum number\n2. Display count of maximum occurrences\n3. Display count of divisors of maximum\n4. Quit\nEnter your choice: "
+invalidChoice: .asciiz "\nInvalid choice. Please try again."
+asknumber: .asciiz "Enter the array element: "
+maxMessage: .asciiz "\nThe maximum number in the array is: "
+occurrenceMessage: .asciiz "\nThe maximum number appears "
+timesMessage: .asciiz " time(s) in the array."
+divisorMessage: .asciiz "\nNumbers that divide the maximum without remainder: "
+
+# s0 size of array       
+# s1 is the address of array
+# s2 is the maximum value of array
+# s3 is the count of maximum occurrences
+# s4 is the count of divisors of maximum
+       
+.text
+.globl main
+main:
+    # ask array size
+    li $v0, 4
+    la $a0, askSize
+    syscall
+    
+    # take size input to s0
+    li $v0, 5
+    syscall
+    move $s0, $v0
+    
+    la $s1, array
+    li $t0, 0 # initialize counter with 0
+takearrayelement:
+    bge $t0, $s0, arrayinputdone
+    
+    li $v0, 4
+    la $a0, asknumber
+    syscall
+    
+    li $v0, 5
+    syscall
+    # store the input
+    sll $t3, $t0, 2
+    add $t3, $t3, $s1
+    sw $v0, 0($t3)
+    
+    addi $t0, $t0, 1
+    j takearrayelement
+
+arrayinputdone:
+
+    jal find_maximum
+    jal count_maximum
+    jal count_divisors
+
+displaymenu:
+    li $v0, 4
+    la $a0, menuPrompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t0, $v0  # Store user choice in $t0
+    
+    beq $t0, 1, display_maximum
+    beq $t0, 2, display_count_maximum
+    beq $t0, 3, display_count_divisors
+    beq $t0, 4, quit_program
+    
+    li $v0, 4
+    la $a0, invalidChoice
+    syscall
+    j displaymenu
+
+find_maximum:
+    lw $s2, 0($s1)  # Initialize max with first element
+    li $t0, 1  # Start counter from 1
+find_max_loop:
+    bge $t0, $s0, find_max_done
+    sll $t3, $t0, 2
+    add $t3, $t3, $s1
+    lw $t4, 0($t3)  # Load current element
+    ble $t4, $s2, not_greater
+    move $s2, $t4  # Update max if current element is greater
+not_greater:
+    addi $t0, $t0, 1
+    j find_max_loop
+find_max_done:
+    jr $ra
+
+count_maximum:
+    li $s3, 0  # Initialize counter for occurrences
+    li $t0, 0  # Loop counter
+count_max_loop:
+    bge $t0, $s0, count_max_done
+    sll $t3, $t0, 2
+    add $t3, $t3, $s1
+    lw $t4, 0($t3)
+    bne $t4, $s2, not_equal
+    addi $s3, $s3, 1  # Increment occurrence counter
+not_equal:
+    addi $t0, $t0, 1
+    j count_max_loop
+count_max_done:
+    jr $ra
+
+count_divisors:
+    li $s4, 0  # Initialize counter for divisors
+    li $t0, 0  # Loop counter
+count_div_loop:
+    bge $t0, $s0, count_div_done
+    sll $t3, $t0, 2
+    add $t3, $t3, $s1
+    lw $t4, 0($t3)
+    beq $t4, $s2, not_divisor  # Skip if it's the max number itself
+    beq $t4, $zero, not_divisor  # Skip if it's zero to avoid division by zero
+    div $s2, $t4
+    mfhi $t5  # Get remainder
+    bne $t5, $zero, not_divisor
+    addi $s4, $s4, 1  # Increment divisor counter
+not_divisor:
+    addi $t0, $t0, 1
+    j count_div_loop
+count_div_done:
+    jr $ra
+
+display_maximum:
+    li $v0, 4
+    la $a0, maxMessage
+    syscall
+    li $v0, 1
+    move $a0, $s2
+    syscall
+    j displaymenu
+
+display_count_maximum:
+    li $v0, 4
+    la $a0, occurrenceMessage
+    syscall
+    li $v0, 1
+    move $a0, $s3
+    syscall
+    li $v0, 4
+    la $a0, timesMessage
+    syscall
+    j displaymenu
+
+display_count_divisors:
+    li $v0, 4
+    la $a0, divisorMessage
+    syscall
+    li $v0, 1
+    move $a0, $s4
+    syscall
+    j displaymenu
+
+quit_program:
+    li $v0, 10
+    syscall
+
+
+
+
